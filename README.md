@@ -1,0 +1,49 @@
+# CSV Review Desk
+
+A free, static CSV review workspace for checking a target contract, resolving problem rows, and exporting a reviewed copy. All file processing runs in the browser. No account, upload endpoint, analytics, remote fonts, or AI calls.
+
+## Use
+
+1. Open a UTF-8 CSV or try the problem sample.
+2. Review target mappings and rules. Loading target CSV headers creates text fields only; configure required, unique, email, ISO date, or enum checks yourself.
+3. Resolve the shown problem fields. **Save and next issue** saves the row, rechecks all active records, and advances only if that row is resolved. Ctrl/Cmd+Enter performs the same action while editing.
+4. Show all fields when you need to inspect healthy values. Drafts survive row navigation. Undo restores an entire saved operation.
+5. Review each whitespace batch before applying it. Exclude unresolved rows only with an explicit reason; the audit retains their original and current values.
+6. Confirm omitted source columns, then export the reviewed CSV and audit. Changing data invalidates generated file links. A visible text fallback supports browsers that block downloads.
+7. Save a `.csvreview` project to resume originals, edits, rules, mappings, exclusions, history and drafts. Projects contain your data; store them securely. Nothing is automatically persisted.
+
+## Limits
+
+- CSV: 2 MB, 5,000 records, 50 target/source header columns; project JSON: 16 MB.
+- UTF-8 CSV/TSV only. No XLSX, encoding conversion, database connections, cross-file joins or destination-specific import guarantees.
+- Dates must be real YYYY-MM-DD dates. Ambiguous dates require an informed decision; missing facts are never invented.
+- Unique checks compare exact text. Email checks validate a conservative format, not mailbox existence.
+- Source strings and original records are preserved. Already-corrupted source data cannot be reconstructed.
+- Default CSV export preserves text. Optional spreadsheet protection prefixes formula-risk values, including some phone numbers; use unprotected output for destination imports.
+- Reloading clears memory. Save a project before leaving. Browser unload warnings are best-effort; mobile browsers may not show them.
+- The small-file limit remains intentional. Background validation, large-file streaming and broad schema standards are not implemented.
+
+## Run and test
+
+No dependency installation is needed; Papa Parse 5.7.0 is vendored.
+
+```sh
+python3 -m http.server 8765 --bind 127.0.0.1
+node core.test.mjs
+node project.test.mjs
+python3 scripts/build_site.py
+```
+
+Open `http://127.0.0.1:8765/`. The build script allowlists only eight static files into `dist/`, excluding test captures, working projects, research notes and Git metadata.
+
+## GitHub Pages
+
+The workflow tests the core and project-resume logic, builds the static site, then deploys `dist/` using official Pages actions. Pages serves static assets; it cannot execute server validation or access a database. This product does not need those capabilities.
+
+## Evidence and competition
+
+See [COMPETITORS.md](COMPETITORS.md) for five-product research and [IMPROVEMENTS.md](IMPROVEMENTS.md) for priorities, acceptance checks and measured before/after tasks. Existing free products cover many of these features. Task tests do not prove adoption, retention, willingness to pay or overall superiority.
+
+## Dependency license
+
+Papa Parse 5.7.0 is MIT licensed; see `vendor/LICENSE`.

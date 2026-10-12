@@ -10,7 +10,7 @@ test('demo exposes all duplicate participants and both problem rows',()=>{
 });
 test('corrected demo exports all rows without changing identifiers, phones or quoted names',()=>{
   const s=fresh();editCell(s,1,0,'005');editCell(s,1,1,'Maya');editCell(s,1,2,'maya@example.com');editCell(s,1,3,'2026-04-03');editCell(s,1,4,'active');editCell(s,2,3,'2026-02-28');
-  assert.equal(inspect(s).canExport,true);const csv=exportCsv(s,papa),r=parseCsv(csv,papa);assert.equal(r.rows.length,4);assert.equal(r.rows[0][0],'001');assert.equal(r.rows[0][1],'林, An');assert.equal(r.rows[0][5],'+60123456789');assert.equal(r.rows[1][5],'0123456789');assert.equal(s.original[1][0],'002');
+  assert.equal(inspect(s).canExport,true);const csv=exportCsv(s,papa),r=parseCsv(csv,papa);assert.equal(r.rows.length,4);assert.equal(r.rows[0][0],'001');assert.equal(r.rows[0][1],'Lin, An');assert.equal(r.rows[0][5],'+60123456789');assert.equal(r.rows[1][5],'0123456789');assert.equal(s.original[1][0],'002');
 });
 test('CSV round trip preserves multiline fields, quotes, empty cells and large number strings',()=>{
   const schema={version:1,name:'strings',fields:[{name:'id',type:'text'},{name:'note',type:'text'},{name:'phone',type:'text'}]};

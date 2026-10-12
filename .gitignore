@@ -1,5 +1,7 @@
 dist/
+baseline/
 *.jpg
+*.csvreview
 browser-generated*
 研究记录.md
 验证记录.md
