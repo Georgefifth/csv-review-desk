@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
-import {DEMO_SCHEMA,DEMO_CSV,parseCsv,validateSchema,createSession,inspect,isIsoDate,editCell,editRow,trimPreview,applyTrim,excludeRow,restoreRow,undo,exportCsv,report,LIMITS} from './core.mjs';
+import {DEMO_SCHEMA,DEMO_CSV,parseCsv,parseCsvHeaders,validateSchema,createSession,inspect,isIsoDate,editCell,editRow,trimPreview,applyTrim,excludeRow,restoreRow,undo,exportCsv,report,LIMITS} from './core.mjs';
 const papa=createRequire(import.meta.url)('./vendor/papaparse.min.js');
 const fresh=()=>createSession(parseCsv(DEMO_CSV,papa),DEMO_SCHEMA);
 test('demo exposes all duplicate participants and both problem rows',()=>{
@@ -76,3 +76,10 @@ test('missing cell edits require explicit contiguous strings and preserve empty-
   editRow(s,0,[{source:1,value:''},{source:2,value:'last'}]);assert.deepEqual(s.rows[0],['1','','last']);undo(s);assert.deepEqual(s.rows[0],['1']);
 });
 test('record-width bounds apply to extra data cells, not only headers',()=>{assert.throws(()=>parseCsv('a,b\n'+Array(51).fill('x').join(','),papa));});
+
+test('target headers share sparse-dialect parsing and support header-only templates',()=>{
+  assert.deepEqual(parseCsvHeaders('"CHANELID";"ADDRESS"\n"27";""\n',papa),['CHANELID','ADDRESS']);
+  assert.deepEqual(parseCsvHeaders('id\tvalue\n1\t\n',papa),['id','value']);
+  assert.deepEqual(parseCsvHeaders('id;value\n',papa),['id','value']);
+  assert.throws(()=>parseCsvHeaders('a,a\n',papa));
+});

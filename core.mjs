@@ -21,7 +21,9 @@ export function validateSchema(raw) {
   });
   return {version:1, name:raw.name.slice(0,100), fields};
 }
-export function parseCsv(text, papa, delimiter='') {
+export function parseCsv(text,papa,delimiter=''){return parseDocument(text,papa,delimiter,false);}
+export function parseCsvHeaders(text,papa,delimiter=''){return parseDocument(text,papa,delimiter,true).headers;}
+function parseDocument(text, papa, delimiter, headersOnly) {
   if(!['',',',';','\t'].includes(delimiter))throw new Error('Choose Auto, comma, semicolon or tab.');
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('Maximum file size is 2 MB. Split larger files.');
   if (!text.trim()) throw new Error('The file is empty. Load a CSV with headers and records.');
@@ -43,6 +45,7 @@ export function parseCsv(text, papa, delimiter='') {
   const headers = matrix.shift();
   if (!headers?.length || headers.length > LIMITS.columns) throw new Error('Supported column count: 1–50.');
   if (headers.some(h=>!h.trim()) || new Set(headers.map(h=>h.trim())).size !== headers.length) throw new Error('Headers are empty or repeated. Fix the headers, then reload.');
+  if(headersOnly)return {headers,delimiter:parsed.meta.delimiter||','};
   if (!matrix.length) throw new Error('The file contains headers but no records.');
   if(matrix.some(row=>row.length>LIMITS.columns))throw new Error('Supported column count: 1–50, including extra cells in records.');
   if (matrix.length > LIMITS.rows) throw new Error('Maximum record count is 5,000. Split larger files.');

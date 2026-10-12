@@ -1,4 +1,4 @@
-import {DEMO_SCHEMA,DEMO_CSV,LIMITS,validateSchema,parseCsv,createSession,inspect,editRow,trimPreview,applyTrim,excludeRow,restoreRow,undo,exportCsv,report} from './core.mjs';
+import {DEMO_SCHEMA,DEMO_CSV,LIMITS,validateSchema,parseCsv,parseCsvHeaders,createSession,inspect,editRow,trimPreview,applyTrim,excludeRow,restoreRow,undo,exportCsv,report} from './core.mjs';
 import {saveProject,restoreProject,reuseMapping,PROJECT_LIMIT} from './project.mjs';
 const $=id=>document.getElementById(id);
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -102,9 +102,10 @@ $('demo').addEventListener('click',guarded(async()=>{if(!await confirmReplacemen
 $('load').addEventListener('click',guarded(async()=>{const text=$('source-text').value;parseCsv(text,window.Papa,selectedDelimiter());if(await confirmReplacement())load(text,'pasted.csv');}));
 $('source-file').addEventListener('change',guarded(async e=>{const f=e.target.files[0];try{if(f){const text=await readFile(f);parseCsv(text,window.Papa,selectedDelimiter());if(await confirmReplacement())load(text,f.name);}}finally{e.target.value='';}}));
 $('target-file').addEventListener('change',guarded(async e=>{
-  const f=e.target.files[0];if(!f)return;const text=await readFile(f),parsed=window.Papa.parse(text,{dynamicTyping:false,skipEmptyLines:false,preview:1,delimiter:selectedDelimiter(),delimitersToGuess:[',',';','\t']});
-  if(parsed.errors.some(x=>x.code!=='UndetectableDelimiter'))throw new Error('Cannot parse the target CSV. Check its quotes.');
-  setSchema({version:1,name:f.name+' header rules',fields:(parsed.data[0]||[]).map(name=>({name,type:'text',required:false,unique:false}))});e.target.value='';
+  const f=e.target.files[0];if(!f)return;
+  try{const headers=parseCsvHeaders(await readFile(f),window.Papa,selectedDelimiter());
+    setSchema({version:1,name:f.name+' header rules',fields:headers.map(name=>({name,type:'text',required:false,unique:false}))});
+  }finally{e.target.value='';}
 }));
 $('apply-schema').addEventListener('click',guarded(()=>setSchema(JSON.parse($('schema-text').value))));
 $('save-schema').addEventListener('click',()=>download('target-rules.json',JSON.stringify(schema,null,2),'application/json;charset=utf-8'));
