@@ -40,3 +40,11 @@ Counts exclude initial file loading and unchanged setup; this is one bounded sub
 28 automated tests and the specific browser tasks support technical correctness within stated limits. No real-user preference, retention, payment, accessibility assistive-technology study, cross-browser matrix or comparative competitor latency test has been completed.
 
 GitHub Pages can serve this browser-only product. It cannot add trusted server validation or database access. The build uses an allowlist; work/project files and research captures are excluded. Public deployment must be verified separately after the workflow finishes.
+
+## Public release verification
+
+[GitHub repository](https://github.com/Georgefifth/csv-review-desk) · [GitHub Pages](https://georgefifth.github.io/csv-review-desk/)
+
+The actual HTTPS Pages release was opened and tested after deployment. The four-record repair task completed, saved-and-next showed one relevant field, all four records passed configured rules, and the generated CSV preserved untouched IDs/phones and quoted text. A project generated on the public site was resumed in a fresh public-site tab; four passing records and export availability were restored. At mobile size, the client/document widths were both 375px; the table scrolls within its own container. A 150-cell whitespace task applied the first 100 and retained 50 pending cells, as intended.
+
+A local Node 26 engine-only benchmark used 5,000 valid six-field records, 10 warm-up iterations and 30 measured iterations. Baseline median/p95: **2.92/5.53 ms**. Current median/p95: **3.06/4.66 ms**. This does **not** demonstrate a processing-speed improvement or predict browser/human task time; the validated improvement is interaction/recovery behavior.
