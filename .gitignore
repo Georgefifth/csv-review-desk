@@ -1,0 +1,13 @@
+dist/
+*.jpg
+browser-generated*
+研究记录.md
+验证记录.md
+VALIDATION.md
+DESIGN.md
+verify-browser-output.mjs
+tools/translate_ui.py
+__pycache__/
+.env*
+*.pem
+*.key

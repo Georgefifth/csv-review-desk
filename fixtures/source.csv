@@ -1,0 +1,3 @@
+phone,customer_id,name,email,start_date,status,internal_notes
++60123,001,林 An,an@example.com,2026-10-12,active,do not export
+01234,002,Maya,maya@example.com,2026-10-13,paused,internal only
