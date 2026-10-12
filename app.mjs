@@ -13,7 +13,7 @@ function download(name,text,type){if(downloadUrl)URL.revokeObjectURL(downloadUrl
 function invalidatePreview(){preview=null;$('trim-preview').hidden=true;invalidateDownload();}
 function invalidateDownload(){if(downloadUrl)URL.revokeObjectURL(downloadUrl);downloadUrl=null;$('download-fallback').hidden=true;$('download-link').removeAttribute('href');$('download-content').value='';}
 function load(text,name){const parsed=parseCsv(text,window.Papa),mapping=reuseMapping(parsed.headers,schema,session);session=createSession(parsed,schema);session.mapping=mapping;drafts.clear();showAllFields=false;filename=name;selected=inspect(session).issues[0]?.row??0;page=Math.floor(selected/100);queuePage=0;omitAck=false;invalidatePreview();$('source-text').value=text;$('file-name').textContent=`${name} · ${parsed.rows.length} records · ${parsed.headers.length} columns`;
-  render();document.querySelector('.mapping').open=inspect(session).mappingIssues.length>0;notify(`Loaded ${parsed.rows.length} records. Original values are preserved. Review the rules before editing.`);
+  render();$('setup-panel').open=false;document.querySelector('.mapping').open=inspect(session).mappingIssues.length>0;notify(`Loaded ${parsed.rows.length} records. Original values are preserved. Review the rules before editing.`);
 }
 async function readFile(file,limit=LIMITS.bytes){if(!file)throw new Error('Choose a file.');if(file.size>limit)throw new Error(`Maximum file size is ${limit/1024/1024} MB.`);try{return new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer());}catch{throw new Error('The file is not valid UTF-8. Export a UTF-8 CSV from the source system and retry.');}}
 function setSchema(next){schema=validateSchema(next);if(session){session.schema=schema;session.mapping=schema.fields.map(f=>session.headers.indexOf(f.name));omitAck=false;}invalidatePreview();render();notify('Target rules applied. Review mappings; source values are unchanged.');}
@@ -77,6 +77,7 @@ function renderChanges(){
 }
 function omittedSources(){return session?session.headers.filter((_,i)=>!session.mapping.includes(i)):[];}
 function updateExport(result){
+  document.body.classList.toggle('ready-for-export',!!session&&!!result.canExport&&!drafts.size);
   const omitted=omittedSources();
   $('omitted').innerHTML=omitted.length?`<div class="omission">These source columns are not in the target: ${omitted.map(esc).join(', ')}.<label class="check-row"><input id="omit-ack" type="checkbox" ${omitAck?'checked':''}>I confirm these columns can be omitted</label></div>`:'';
   $('omit-ack')?.addEventListener('change',e=>{omitAck=e.target.checked;invalidateDownload();$('export-csv').disabled=!result.canExport||!omitAck||drafts.size>0;});
@@ -85,6 +86,8 @@ function updateExport(result){
   $('export-status').textContent=!session?'Waiting for checks':drafts.size?'Save or discard drafts first':result.canExport?`${result.active} rows pass configured rules`:result.mappingIssues.length?'Complete mappings first':result.active===0?'All records are excluded; nothing to export':`${result.review} rows need review`;
 }
 function render(){
+  document.body.classList.toggle('has-session',!!session);
+  $('setup-hint').textContent=session?filename:'Open a CSV or resume saved work';
   renderMapping();const result=session?inspect(session):{issues:[],mappingIssues:[],canExport:false};
   $('accounting').innerHTML=[['Source records',session?result.total:'—'],['Pass rules',session?result.ready:'—'],['Needs review',session?result.review:'—'],['Excluded',session?result.excluded:'—']].map(([name,count])=>`<p>${name}<strong>${count}</strong></p>`).join('');
   $('mapping-status').textContent=!session?'Waiting for a source file':result.mappingIssues.length?`${result.mappingIssues.length} mapping issues`:'All fields mapped';
@@ -121,7 +124,7 @@ async function confirmReplacement(){
   return new Promise(resolve=>{const close=value=>{dialog.close();$('keep-work').onclick=null;$('replace-work').onclick=null;dialog.oncancel=null;resolve(value);};$('keep-work').onclick=()=>close(false);$('replace-work').onclick=()=>close(true);dialog.oncancel=e=>{e.preventDefault();close(false);};});
 }
 $('save-project').addEventListener('click',guarded(()=>{download('csv-review-project.csvreview',saveProject(session,drafts,filename),'application/json;charset=utf-8');notify('Project generated, including drafts and history. It contains your data; keep it secure.');}));
-$('project-file').addEventListener('change',guarded(async e=>{const file=e.target.files[0];if(!file)return;const restored=restoreProject(await readFile(file,PROJECT_LIMIT));if(!await confirmReplacement()){e.target.value='';return;}session=restored.session;schema=session.schema;drafts.clear();restored.drafts.forEach((v,k)=>drafts.set(k,v));filename=restored.filename;selected=inspect(session).issues[0]?.row??0;page=Math.floor(selected/100);queuePage=0;showAllFields=false;omitAck=false;invalidatePreview();$('source-text').value=window.Papa.unparse([session.headers,...session.original]);$('file-name').textContent=`${filename} · ${session.rows.length} records · resumed`;render();document.querySelector('.mapping').open=inspect(session).mappingIssues.length>0;e.target.value='';notify('Project resumed. Original data, edits, rules, exclusions and drafts restored.');}));
+$('project-file').addEventListener('change',guarded(async e=>{const file=e.target.files[0];if(!file)return;const restored=restoreProject(await readFile(file,PROJECT_LIMIT));if(!await confirmReplacement()){e.target.value='';return;}session=restored.session;schema=session.schema;drafts.clear();restored.drafts.forEach((v,k)=>drafts.set(k,v));filename=restored.filename;selected=inspect(session).issues[0]?.row??0;page=Math.floor(selected/100);queuePage=0;showAllFields=false;omitAck=false;invalidatePreview();$('source-text').value=window.Papa.unparse([session.headers,...session.original]);$('file-name').textContent=`${filename} · ${session.rows.length} records · resumed`;render();$('setup-panel').open=false;document.querySelector('.mapping').open=inspect(session).mappingIssues.length>0;e.target.value='';notify('Project resumed. Original data, edits, rules, exclusions and drafts restored.');}));
 $('safe-export').addEventListener('change',invalidateDownload);
 window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&session&&document.activeElement?.closest('#repair')){e.preventDefault();try{saveSelected(true);}catch(error){notify(error.message,true);}}});
 window.addEventListener('beforeunload',e=>{if(session&&(session.events.length||drafts.size)){e.preventDefault();e.returnValue='';}});
