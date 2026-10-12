@@ -88,17 +88,17 @@ function commit(s,changes,label) {
 }
 export function editCell(s,row,source,value) {
   if (typeof value!=='string' || source<0 || source>=s.headers.length || row<0 || row>=s.rows.length) throw new Error('Invalid cell edit.');
-  const before=s.rows[row][source]??'';
+  const before=s.rows[row][source]??'',beforeLength=s.rows[row].length;
   if(before===value)return;
   s.rows[row][source]=value;
-  commit(s,[{kind:'cell',row,source,before,after:value}],'Edit cell');
+  commit(s,[{kind:'cell',row,source,before,after:value,...(source>=beforeLength?{beforeLength}:{})}],'Edit cell');
 }
 export function editRow(s,row,edits) {
   if(!Number.isInteger(row)||row<0||row>=s.rows.length||s.excluded.has(row))throw new Error('This row cannot be edited.');
   const seen=new Set(),changes=edits.flatMap(({source,value})=>{
     if(!Number.isInteger(source)||source<0||source>=s.headers.length||typeof value!=='string'||seen.has(source))throw new Error('Invalid or repeated cell edits.');
     seen.add(source);const before=s.rows[row][source]??'';
-    return before===value?[]:[{kind:'cell',row,source,before,after:value}];
+    return before===value?[]:[{kind:'cell',row,source,before,after:value,...(source>=s.rows[row].length?{beforeLength:s.rows[row].length}:{})}];
   });
   changes.forEach(c=>s.rows[c.row][c.source]=c.after);commit(s,changes,'Save row edits');
 }
@@ -128,7 +128,7 @@ export function restoreRow(s,row) {
 export function undo(s) {
   const last=s.history.pop();if(!last)return false;
   [...last.changes].reverse().forEach(c=>{
-    if(c.kind==='cell')s.rows[c.row][c.source]=c.before;
+    if(c.kind==='cell'){s.rows[c.row][c.source]=c.before;if(c.beforeLength!==undefined)s.rows[c.row].length=c.beforeLength;}
     else if(c.before===null)s.excluded.delete(c.row);else s.excluded.set(c.row,c.before);
   });
   s.events.push({action:`Undo: ${last.label}`,changes:last.changes.map(c=>({...c,before:c.after,after:c.before}))});return true;

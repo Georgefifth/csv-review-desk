@@ -47,3 +47,7 @@ See [COMPETITORS.md](COMPETITORS.md) for five-product research and [IMPROVEMENTS
 ## Dependency license
 
 Papa Parse 5.7.0 is MIT licensed; see `vendor/LICENSE`.
+
+## External validation (2026-10-13)
+
+A frozen 29-file suite used real Palmer Penguins and OurAirports datasets, external CSV Spectrum/Frictionless fixtures, and separately labelled derived and synthetic edge cases. Initial testing found that undo after filling a missing column failed to restore the original row width and could incorrectly enable export. Shape-aware undo now survives project resume. The initial evidence is retained separately from regression results. Post-fix: 27 assessable cases passed; two publisher reference conflicts remain inconclusive. This is a scoped engineering result, not general accuracy, adoption, RFC email validation, or spreadsheet-injection certification. External validation files and captures are kept outside the deployment allowlist.

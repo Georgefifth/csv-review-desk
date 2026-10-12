@@ -24,3 +24,8 @@ test('100-cell visible batches repair larger sets without modifying unseen cells
 });
 test('duplicate or stale batch edits fail atomically',()=>{const s=fresh(),p=trimPreview(s);assert.throws(()=>applyTrim(s,[p[0],p[0]]));assert.equal(s.rows[1][1],'  Maya  ');const changed=structuredClone(p);changed[0].after='wrong';assert.throws(()=>applyTrim(s,changed));assert.equal(s.rows[1][1],'  Maya  ');});
 test('mapping reuse follows source names across column reorder and never stale positions',()=>{const s=fresh();s.headers[2]='Primary Email';assert.deepEqual(reuseMapping(['Primary Email','customer_id','name','start_date','status','phone'],s.schema,s),[1,2,0,3,4,5]);assert.equal(reuseMapping(['customer_id','name','Other','start_date','status','phone'],s.schema,s)[2],-1);});
+test('saved missing-column edit retains shape-aware undo after resume',()=>{
+ const schema={version:1,name:'ragged project',fields:[{name:'a',type:'text'},{name:'b',type:'text'}]};
+ const s=createSession(parseCsv('a,b\n1\n2,3',papa),schema);editRow(s,0,[{source:1,value:'filled'}]);
+ const resumed=restoreProject(saveProject(s,new Map(),'ragged.csv')).session;undo(resumed);assert.deepEqual(resumed.rows[0],['1']);assert.equal(inspect(resumed).canExport,false);
+});

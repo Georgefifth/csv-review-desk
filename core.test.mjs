@@ -57,3 +57,9 @@ test('audit records original excluded values and edits with reversals',()=>{cons
 test('row repair commits all cells together and undo restores the whole operation',()=>{const s=fresh();editRow(s,1,[{source:0,value:'005'},{source:2,value:'maya@example.com'}]);assert.equal(s.history.length,1);assert.equal(s.rows[1][0],'005');undo(s);assert.equal(s.rows[1][0],'002');assert.equal(s.rows[1][2],'maya.example.com');});
 test('invalid later row edit leaves every cell untouched',()=>{const s=fresh();assert.throws(()=>editRow(s,1,[{source:0,value:'005'},{source:100,value:'bad'}]));assert.equal(s.rows[1][0],'002');});
 test('a 5000-row duplicate group flags every row with bounded explanation size',()=>{const schema={version:1,name:'large',fields:[{name:'id',type:'text',unique:true}]},s=createSession(parseCsv('id\n'+'001\n'.repeat(5000),papa),schema),r=inspect(s);assert.equal(r.review,5000);assert.equal(r.issues.length,5000);assert(r.issues.every(i=>i.message.length<200));assert.equal(r.canExport,false);});
+test('undo restores missing source columns rather than inventing empty cells',()=>{
+  const schema={version:1,name:'ragged undo',fields:[{name:'a',type:'text'},{name:'b',type:'text'},{name:'c',type:'text'}]};
+  for(const edit of [(s)=>editCell(s,0,2,'filled'),(s)=>editRow(s,0,[{source:1,value:'b'},{source:2,value:'c'}])]){
+    const s=createSession(parseCsv('a,b,c\n1\n2,3,4',papa),schema);edit(s);undo(s);assert.deepEqual(s.rows[0],['1']);assert.equal(inspect(s).canExport,false);
+  }
+});

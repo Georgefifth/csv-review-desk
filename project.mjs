@@ -33,7 +33,7 @@ export function restoreProject(text){
       const label=op?.[isHistory?'label':'action'];if(typeof label!=='string'||label.length>200||!Array.isArray(op.changes)||op.changes.length>LIMITS.rows*LIMITS.columns)fail();
       const changes=op.changes.map(c=>{
         if(!c||!rowOK(c.row)||!['cell','exclude'].includes(c.kind))fail();
-        if(c.kind==='cell'){if(!columnOK(c.source)||typeof c.before!=='string'||typeof c.after!=='string')fail();return {kind:'cell',row:c.row,source:c.source,before:c.before,after:c.after};}
+        if(c.kind==='cell'){if(!columnOK(c.source)||typeof c.before!=='string'||typeof c.after!=='string')fail();if(c.beforeLength!==undefined&&(!Number.isInteger(c.beforeLength)||c.beforeLength<0||c.beforeLength>c.source))fail();return {kind:'cell',row:c.row,source:c.source,before:c.before,after:c.after,...(c.beforeLength!==undefined?{beforeLength:c.beforeLength}:{})};}
         if(![c.before,c.after].every(v=>v===null||typeof v==='string'))fail();return {kind:'exclude',row:c.row,before:c.before,after:c.after};
       });return {[isHistory?'label':'action']:label,changes};
     });
