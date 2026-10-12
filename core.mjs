@@ -21,10 +21,21 @@ export function validateSchema(raw) {
   });
   return {version:1, name:raw.name.slice(0,100), fields};
 }
-export function parseCsv(text, papa) {
+export function parseCsv(text, papa, delimiter='') {
+  if(!['',',',';','\t'].includes(delimiter))throw new Error('Choose Auto, comma, semicolon or tab.');
   if (new TextEncoder().encode(text).length > LIMITS.bytes) throw new Error('Maximum file size is 2 MB. Split larger files.');
   if (!text.trim()) throw new Error('The file is empty. Load a CSV with headers and records.');
-  const parsed = papa.parse(text.replace(/^\uFEFF/,''), {header:false, dynamicTyping:false, skipEmptyLines:false, delimitersToGuess:[',',';','\t']});
+  const source=text.replace(/^\uFEFF/,''),config={header:false,dynamicTyping:false,skipEmptyLines:false,delimitersToGuess:[',',';','\t']};
+  let parsed=papa.parse(source,{...config,...(delimiter?{delimiter}:{})});
+  // Sparse short files can defeat frequency guessing. A distinct multi-column header
+  // provides a second signal; ambiguous candidates require an explicit user choice.
+  if(!delimiter&&parsed.errors.length){
+    const candidates=[',',';','\t'].map(d=>papa.parse(source,{...config,delimiter:d})).filter(p=>{
+      const h=p.data[0];return !p.errors.length&&h?.length>1&&h.length<=LIMITS.columns&&h.every(v=>v.trim())&&new Set(h.map(v=>v.trim())).size===h.length;
+    });
+    if(candidates.length===1)parsed=candidates[0];
+    else if(candidates.length>1)throw new Error('The delimiter is ambiguous. Choose comma, semicolon or tab, then retry.');
+  }
   const serious = parsed.errors.filter(e => e.code !== 'UndetectableDelimiter');
   if (serious.length) throw new Error(`Cannot reliably parse the CSV: ${serious[0].message}. Check the quotes, then reload.`);
   const matrix = parsed.data;
@@ -33,6 +44,7 @@ export function parseCsv(text, papa) {
   if (!headers?.length || headers.length > LIMITS.columns) throw new Error('Supported column count: 1–50.');
   if (headers.some(h=>!h.trim()) || new Set(headers.map(h=>h.trim())).size !== headers.length) throw new Error('Headers are empty or repeated. Fix the headers, then reload.');
   if (!matrix.length) throw new Error('The file contains headers but no records.');
+  if(matrix.some(row=>row.length>LIMITS.columns))throw new Error('Supported column count: 1–50, including extra cells in records.');
   if (matrix.length > LIMITS.rows) throw new Error('Maximum record count is 5,000. Split larger files.');
   return {headers, rows:matrix, delimiter:parsed.meta.delimiter || ','};
 }
@@ -57,7 +69,7 @@ export function inspect(s) {
   });
   s.rows.forEach((row,r)=>{
     if (s.excluded.has(r)) return;
-    if (row.length !== s.headers.length) issues.push({row:r,field:-1,code:'structure',message:`This record has ${row.length} columns; the header has ${s.headers.length}. Exclude it explicitly or fix the source and reload.`});
+    if (row.length !== s.headers.length) issues.push({row:r,field:-1,code:'structure',message:`This record has ${row.length} columns; the header has ${s.headers.length}. ${row.length<s.headers.length?'Review column alignment before filling every missing cell or confirming it empty.':'Exclude it explicitly or fix the source and reload.'}`});
     s.schema.fields.forEach((field,f)=>{
       if (s.mapping[f]<0) return;
       const value=valueAt(s,r,f);
@@ -87,19 +99,18 @@ function commit(s,changes,label) {
   s.events.push({action:label,changes:structuredClone(changes)});
 }
 export function editCell(s,row,source,value) {
-  if (typeof value!=='string' || source<0 || source>=s.headers.length || row<0 || row>=s.rows.length) throw new Error('Invalid cell edit.');
-  const before=s.rows[row][source]??'',beforeLength=s.rows[row].length;
-  if(before===value)return;
-  s.rows[row][source]=value;
-  commit(s,[{kind:'cell',row,source,before,after:value,...(source>=beforeLength?{beforeLength}:{})}],'Edit cell');
+  editRow(s,row,[{source,value}]);
 }
 export function editRow(s,row,edits) {
   if(!Number.isInteger(row)||row<0||row>=s.rows.length||s.excluded.has(row))throw new Error('This row cannot be edited.');
-  const seen=new Set(),changes=edits.flatMap(({source,value})=>{
+  const seen=new Set(),width=s.rows[row].length;
+  const changes=edits.flatMap(({source,value})=>{
     if(!Number.isInteger(source)||source<0||source>=s.headers.length||typeof value!=='string'||seen.has(source))throw new Error('Invalid or repeated cell edits.');
     seen.add(source);const before=s.rows[row][source]??'';
-    return before===value?[]:[{kind:'cell',row,source,before,after:value,...(source>=s.rows[row].length?{beforeLength:s.rows[row].length}:{})}];
+    return source<width&&before===value?[]:[{kind:'cell',row,source,before,after:value,...(source>=width?{beforeLength:width}:{})}];
   });
+  const end=Math.max(width-1,...changes.map(c=>c.source));
+  for(let source=width;source<=end;source++)if(!seen.has(source))throw new Error('Supply every missing cell before extending a short record, or fix the source and reload. No values were changed.');
   changes.forEach(c=>s.rows[c.row][c.source]=c.after);commit(s,changes,'Save row edits');
 }
 export function trimPreview(s) {

@@ -4,9 +4,9 @@ A free, static CSV review workspace for checking a target contract, resolving pr
 
 ## Use
 
-1. Open a UTF-8 CSV or try the problem sample.
+1. Open a UTF-8 CSV or try the problem sample. Auto detection handles comma, semicolon and tab; choose the file delimiter explicitly when necessary. The load message confirms the delimiter used.
 2. Review target mappings and rules. Loading target CSV headers creates text fields only; configure required, unique, email, ISO date, or enum checks yourself.
-3. Resolve the shown problem fields. **Save and next issue** saves the row, rechecks all active records, and advances only if that row is resolved. Ctrl/Cmd+Enter performs the same action while editing.
+3. Resolve the shown problem fields. For short records, verify column alignment and supply every missing cell up to the last added value. Use **Confirm empty … cell** only when that empty value is intentional. Noncontiguous additions are rejected without changing saved data. **Save and next issue** saves the row, rechecks all active records, and advances only if that row is resolved. Ctrl/Cmd+Enter performs the same action while editing.
 4. Show all fields when you need to inspect healthy values. Drafts survive row navigation. Undo restores an entire saved operation.
 5. Review each whitespace batch before applying it. Exclude unresolved rows only with an explicit reason; the audit retains their original and current values.
 6. Confirm omitted source columns, then export the reviewed CSV and audit. Changing data invalidates generated file links. A visible text fallback supports browsers that block downloads.
@@ -51,3 +51,5 @@ Papa Parse 5.7.0 is MIT licensed; see `vendor/LICENSE`.
 ## External validation (2026-10-13)
 
 A frozen 29-file suite used real Palmer Penguins and OurAirports datasets, external CSV Spectrum/Frictionless fixtures, and separately labelled derived and synthetic edge cases. Initial testing found that undo after filling a missing column failed to restore the original row width and could incorrectly enable export. Shape-aware undo now survives project resume. The initial evidence is retained separately from regression results. Post-fix: 27 assessable cases passed; two publisher reference conflicts remain inconclusive. This is a scoped engineering result, not general accuracy, adoption, RFC email validation, or spreadsheet-injection certification. External validation files and captures are kept outside the deployment allowlist.
+
+A second frozen external-data round added 23 cases from Apache Commons CSV regressions, public currency codes and World Bank-derived population data, with labelled derived/synthetic supplements. Initial results found six failing cases: sparse delimiter guessing, noncontiguous/explicit-empty additions, and an overwide data record. After fixes: 20 assessable cases pass; three unsupported Apache dialect configurations are retained as skips. The previous 29-case suite also remains at 27 passes and two reference conflicts. These are bounded task results, not general accuracy estimates.

@@ -59,7 +59,20 @@ test('invalid later row edit leaves every cell untouched',()=>{const s=fresh();a
 test('a 5000-row duplicate group flags every row with bounded explanation size',()=>{const schema={version:1,name:'large',fields:[{name:'id',type:'text',unique:true}]},s=createSession(parseCsv('id\n'+'001\n'.repeat(5000),papa),schema),r=inspect(s);assert.equal(r.review,5000);assert.equal(r.issues.length,5000);assert(r.issues.every(i=>i.message.length<200));assert.equal(r.canExport,false);});
 test('undo restores missing source columns rather than inventing empty cells',()=>{
   const schema={version:1,name:'ragged undo',fields:[{name:'a',type:'text'},{name:'b',type:'text'},{name:'c',type:'text'}]};
-  for(const edit of [(s)=>editCell(s,0,2,'filled'),(s)=>editRow(s,0,[{source:1,value:'b'},{source:2,value:'c'}])]){
+  for(const edit of [(s)=>editCell(s,0,1,'filled'),(s)=>editRow(s,0,[{source:1,value:'b'},{source:2,value:'c'}])]){
     const s=createSession(parseCsv('a,b,c\n1\n2,3,4',papa),schema);edit(s);undo(s);assert.deepEqual(s.rows[0],['1']);assert.equal(inspect(s).canExport,false);
   }
 });
+
+test('sparse semicolon and TSV files retain empty fields instead of guessing comma',()=>{
+  assert.deepEqual(parseCsv('"id";"value"\n"1";""\n',papa).rows,[['1','']]);
+  assert.deepEqual(parseCsv('id\tvalue\n1\t\n2\t\n',papa).rows,[['1',''],['2','']]);
+  assert.deepEqual(parseCsv('id;value\n1;2',papa,';').headers,['id','value']);
+  assert.throws(()=>parseCsv('a,b\n1,2',papa,'|'));
+});
+test('missing cell edits require explicit contiguous strings and preserve empty-cell undo',()=>{
+  const schema={version:1,name:'missing cells',fields:[{name:'a',type:'text'},{name:'b',type:'text'},{name:'c',type:'text'}]},s=createSession(parseCsv('a,b,c\n1\n2,3,4',papa),schema);
+  assert.throws(()=>editRow(s,0,[{source:0,value:'changed'},{source:2,value:'last'}]));assert.deepEqual(s.rows[0],['1']);assert.equal(s.history.length,0);
+  editRow(s,0,[{source:1,value:''},{source:2,value:'last'}]);assert.deepEqual(s.rows[0],['1','','last']);undo(s);assert.deepEqual(s.rows[0],['1']);
+});
+test('record-width bounds apply to extra data cells, not only headers',()=>{assert.throws(()=>parseCsv('a,b\n'+Array(51).fill('x').join(','),papa));});
