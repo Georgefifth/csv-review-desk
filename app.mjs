@@ -54,7 +54,7 @@ function renderRepair(result){
     });
   });
   $('repair').querySelectorAll('[data-empty-source]').forEach(el=>el.addEventListener('click',()=>{drafts.set(`${selected}:${el.dataset.emptySource}`,'');invalidatePreview();render();notify('Empty cell explicitly confirmed. Save the row to apply it.');}));
-  if(!excluded){const actions=document.createElement('div');actions.className='actions repair-actions';actions.innerHTML='<button id="save-next">Save and next issue</button><button id="save-row" class="secondary">Save row</button>';$('repair').insertBefore(actions,$('repair').querySelector('.exclude-box'));$('save-row').addEventListener('click',guarded(()=>saveSelected(false)));$('save-next').addEventListener('click',guarded(()=>saveSelected(true)));}
+  if(!excluded){const actions=document.createElement('div');actions.className='actions repair-actions';actions.innerHTML='<button id="save-next">Save and next issue</button><button id="save-row" class="secondary">Save row</button>';$('repair').insertBefore(actions,$('repair').querySelector('.editor-field'));$('save-row').addEventListener('click',guarded(()=>saveSelected(false)));$('save-next').addEventListener('click',guarded(()=>saveSelected(true)));}
   if(drafts.size){const discard=document.createElement('button');discard.className='quiet';discard.textContent=`Discard all ${drafts.size} unsaved edits`;discard.addEventListener('click',()=>{drafts.clear();render();notify('Unsaved edits discarded. Working values are unchanged.');});$('repair').append(discard);}
   $('exclude-row')?.addEventListener('click',guarded(()=>{excludeRow(session,selected,$('exclude-reason').value);invalidatePreview();render();notify(`Row ${selected+1} excluded. Original values and the reason are retained in the audit.`);}));
   $('restore-row')?.addEventListener('click',()=>{restoreRow(session,selected);invalidatePreview();render();notify('Row restored and rechecked.');});
@@ -99,6 +99,7 @@ function render(){
   renderTable(result);renderRepair(result);renderChanges();updateExport(result);
 }
 $('demo').addEventListener('click',guarded(async()=>{if(!await confirmReplacement())return;$('source-delimiter').value='';schema=validateSchema(DEMO_SCHEMA);load(DEMO_CSV,'contacts-demo.csv');}));
+$('preview-demo').addEventListener('click',()=>$('demo').click());
 $('load').addEventListener('click',guarded(async()=>{const text=$('source-text').value;parseCsv(text,window.Papa,selectedDelimiter());if(await confirmReplacement())load(text,'pasted.csv');}));
 $('source-file').addEventListener('change',guarded(async e=>{const f=e.target.files[0];try{if(f){const text=await readFile(f);parseCsv(text,window.Papa,selectedDelimiter());if(await confirmReplacement())load(text,f.name);}}finally{e.target.value='';}}));
 $('target-file').addEventListener('change',guarded(async e=>{

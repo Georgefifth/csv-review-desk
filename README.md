@@ -34,7 +34,7 @@ node project.test.mjs
 python3 scripts/build_site.py
 ```
 
-Open `http://127.0.0.1:8765/`. The build script allowlists only eight static files into `dist/`, excluding test captures, working projects, research notes and Git metadata.
+Open `http://127.0.0.1:8765/`. The build script allowlists only ten static files into `dist/`, excluding test captures, working projects, research notes and Git metadata.
 
 ## GitHub Pages
 
@@ -53,3 +53,7 @@ Papa Parse 5.7.0 is MIT licensed; see `vendor/LICENSE`.
 A frozen 29-file suite used real Palmer Penguins and OurAirports datasets, external CSV Spectrum/Frictionless fixtures, and separately labelled derived and synthetic edge cases. Initial testing found that undo after filling a missing column failed to restore the original row width and could incorrectly enable export. Shape-aware undo now survives project resume. The initial evidence is retained separately from regression results. Post-fix: 27 assessable cases passed; two publisher reference conflicts remain inconclusive. This is a scoped engineering result, not general accuracy, adoption, RFC email validation, or spreadsheet-injection certification. External validation files and captures are kept outside the deployment allowlist.
 
 A second frozen external-data round added 23 cases from Apache Commons CSV regressions, public currency codes and World Bank-derived population data, with labelled derived/synthetic supplements. Initial results found six failing cases: sparse delimiter guessing, noncontiguous/explicit-empty additions, and an overwide data record. After fixes: 20 assessable cases pass; three unsupported Apache dialect configurations are retained as skips. The previous 29-case suite also remains at 27 passes and two reference conflicts. These are bounded task results, not general accuracy estimates.
+
+## Visual design
+
+The review workspace uses a locally hosted Atkinson Hyperlegible Next variable font (OFL-1.1; assets/OFL.txt), a cobalt action accent and coral exception cues. The initial labelled example opens the existing working demo. Save actions appear before fields in the repair panel and remain sticky while reviewing a row. Responsive tables scroll within their own containers. No competitor artwork, remote fonts or decorative animations are used.
