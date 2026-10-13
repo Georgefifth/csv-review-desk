@@ -27,3 +27,4 @@ body:not(.has-session) .workspace{display:grid;grid-template-columns:minmax(0,1f
 @media(max-width:760px){.accounting{gap:8px 12px}.account-filter{font-size:12px;gap:6px;padding:4px}.account-filter strong{font-size:20px}.workflow-button{font-size:12px}.inline-editor{font-size:16px}}
 
 .example-cell{display:block;background:transparent;color:inherit;border:0;border-radius:3px;padding:0;min-height:26px;font:inherit;text-align:left}.example-cell:hover:not(:disabled){background:#ffdfcf;color:#8e2d27;text-decoration:underline}
+.cell-value:has(.inline-edit){min-width:260px;max-width:320px;overflow:visible;white-space:normal}
