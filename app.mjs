@@ -1,6 +1,6 @@
 import {DEMO_SCHEMA,DEMO_CSV,LIMITS,validateSchema,parseCsv,parseCsvHeaders,createSession,inspect,editRow,trimPreview,applyTrim,excludeRow,restoreRow,undo,exportCsv,report} from './core.mjs';
 import {saveProject,restoreProject,reuseMapping,PROJECT_LIMIT} from './project.mjs';
-import {visibleRecordIds} from './view.mjs';
+import {visibleRecordIds,draftRows} from './view.mjs';
 const $=id=>document.getElementById(id);
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const quoted=v=>esc(JSON.stringify(v));
@@ -60,13 +60,22 @@ function setTableFilter(filter){
 }
 function openCell(row,source){selected=row;activeCell={row,source};showAllFields=false;page=pageForRow(row);render();$('inline-value')?.focus();}
 function cancelCell(){if(!activeCell)return;const {row,source}=activeCell;drafts.delete(`${row}:${source}`);activeCell=null;render();document.querySelector(`[data-cell-row="${row}"][data-cell-source="${source}"]`)?.focus({preventScroll:true});notify('Cell draft cancelled. Other drafts and saved values are unchanged.');}
+function renderDrafts(){
+  const tray=$('draft-tray'),rows=draftRows(drafts);tray.hidden=!rows.length;
+  if(!rows.length){tray.innerHTML='';return;}
+  const current=rows.find(item=>item.row===selected),blocked=current?.sources.some(source=>!session.mapping.includes(source));
+  tray.innerHTML=`<div class="draft-summary"><strong>${drafts.size} unsaved ${drafts.size===1?'cell':'cells'} · ${rows.length} ${rows.length===1?'row':'rows'}</strong><span>Checks use saved values. Drafts stay until you save or discard them.</span></div><div class="draft-controls"><label for="draft-row">Find a draft</label><select id="draft-row"><option value="">Choose a row…</option>${rows.map(item=>`<option value="${item.row}" ${item.row===selected?'selected':''}>Row ${item.row+1} · ${item.sources.length} ${item.sources.length===1?'cell':'cells'}${session.excluded.has(item.row)?' · excluded':item.sources.some(source=>!session.mapping.includes(source))?' · unmapped':''}</option>`).join('')}</select><button id="draft-save" ${!current?'hidden':''} ${!current||blocked||session.excluded.has(selected)?'disabled':''}>Save row ${selected+1} drafts</button><button id="draft-discard" class="quiet" ${!current?'hidden':''} ${!current?'disabled':''}>Discard row ${selected+1} drafts</button></div>${blocked?'<p class="error-text">This row has drafts in unmapped columns. Restore those source mappings to save, or discard this row’s drafts.</p>':current&&session.excluded.has(selected)?'<p class="error-text">Restore this excluded row before saving its drafts, or discard this row’s drafts.</p>':''}`;
+  $('draft-row').addEventListener('change',event=>{if(event.target.value==='')return;selectRow(Number(event.target.value));$('repair').querySelector('.editor-field:not([hidden]) textarea')?.focus({preventScroll:true});});
+  $('draft-save').addEventListener('click',guarded(()=>saveSelected(false)));
+  $('draft-discard').addEventListener('click',()=>{for(const source of current.sources)drafts.delete(`${selected}:${source}`);activeCell=null;invalidatePreview();render();$('repair').querySelector('.editor-field:not([hidden]) textarea')?.focus({preventScroll:true});notify(`Row ${selected+1} drafts discarded. Saved values and other rows are unchanged.`);});
+}
 function updateDraft(row,source,value){
   const key=`${row}:${source}`;if(source<session.rows[row].length&&value===session.rows[row][source])drafts.delete(key);else drafts.set(key,value);
-  invalidatePreview();updateExport(inspect(session));$('undo').disabled=drafts.size>0||!session.history.length;$('preview-trim').disabled=drafts.size>0;
+  invalidatePreview();renderDrafts();updateExport(inspect(session));$('undo').disabled=drafts.size>0||!session.history.length;$('preview-trim').disabled=drafts.size>0;
   notify(drafts.size?`${drafts.size} unsaved cell edits. Save before rechecking and exporting.`:'Drafts now match the saved working values.');
 }
 function pager(id,current,total,onChange){$(id).innerHTML=total>1?`<button class="secondary prev" ${current===0?'disabled':''}>Previous</button><span>${current+1} / ${total}</span><button class="secondary next" ${current>=total-1?'disabled':''}>Next</button>`:'';$(id).querySelector('.prev')?.addEventListener('click',()=>onChange(current-1));$(id).querySelector('.next')?.addEventListener('click',()=>onChange(current+1));}
-function selectRow(row){activeCell=null;showAllFields=false;selected=row;page=pageForRow(row);render();$('repair').scrollIntoView({block:'nearest'});}
+function selectRow(row){if(!visibleRecordIds(session,inspect(session),tableFilter).includes(row))tableFilter='all';activeCell=null;showAllFields=false;selected=row;page=pageForRow(row);render();$('repair').scrollIntoView({block:'nearest'});}
 function renderRepair(result){
   if(!session){$('repair').innerHTML='<p class="empty-small">Select a row to review and edit its original values.</p>';$('queue-list').innerHTML='';$('queue-count').textContent='';return;}
   const rowIssues=result.issues.filter(i=>i.row===selected),excluded=session.excluded.has(selected),row=session.rows[selected],problemFields=new Set(rowIssues.map(i=>i.field)),filterFields=!showAllFields&&problemFields.size>0&&!problemFields.has(-1);
@@ -78,8 +87,7 @@ function renderRepair(result){
   });
   $('repair').querySelectorAll('[data-empty-source]').forEach(el=>el.addEventListener('click',()=>{drafts.set(`${selected}:${el.dataset.emptySource}`,'');invalidatePreview();render();notify('Empty cell explicitly confirmed. Save the row to apply it.');}));
   if(!excluded){const actions=document.createElement('div');actions.className='actions repair-actions';actions.innerHTML='<button id="save-next">Save and next issue</button><button id="save-row" class="secondary">Save row</button>';$('repair').insertBefore(actions,$('repair').querySelector('.editor-field'));$('save-row').addEventListener('click',guarded(()=>saveSelected(false)));$('save-next').addEventListener('click',guarded(()=>saveSelected(true)));}
-  if(drafts.size){const discard=document.createElement('button');discard.className='quiet';discard.textContent=`Discard all ${drafts.size} unsaved edits`;discard.addEventListener('click',()=>{drafts.clear();render();notify('Unsaved edits discarded. Working values are unchanged.');});$('repair').append(discard);}
-  $('exclude-row')?.addEventListener('click',guarded(()=>{excludeRow(session,selected,$('exclude-reason').value);invalidatePreview();render();notify(`Row ${selected+1} excluded. Original values and the reason are retained in the audit.`);}));
+  $('exclude-row')?.addEventListener('click',guarded(()=>{if(draftRows(drafts).some(item=>item.row===selected))throw new Error(`Save or discard row ${selected+1} drafts before excluding it.`);excludeRow(session,selected,$('exclude-reason').value);invalidatePreview();render();notify(`Row ${selected+1} excluded. Original values and the reason are retained in the audit.`);}));
   $('restore-row')?.addEventListener('click',()=>{restoreRow(session,selected);invalidatePreview();render();notify('Row restored and rechecked.');});
   const grouped=new Map();result.issues.forEach(i=>{const list=grouped.get(i.row)||[];list.push(i);grouped.set(i.row,list);});
   const rows=[...grouped];queuePage=Math.min(queuePage,Math.max(0,Math.ceil(rows.length/10)-1));
@@ -89,12 +97,16 @@ function renderRepair(result){
   pager('queue-pager',queuePage,Math.ceil(rows.length/10),p=>{queuePage=p;renderRepair(inspect(session));});
 }
 function saveSelected(advance){
-  const savedRow=selected,edits=[...drafts].flatMap(([key,value])=>{const [row,source]=key.split(':').map(Number);return row===selected&&session.mapping.includes(source)?[{source,value}]:[];});
+  const savedCell=activeCell?{...activeCell}:null,savedRow=selected;
+  if(draftRows(drafts).find(item=>item.row===selected)?.sources.some(source=>!session.mapping.includes(source)))throw new Error('Restore the source mappings for this row’s drafts before saving, or discard its drafts.');
+  const edits=[...drafts].flatMap(([key,value])=>{const [row,source]=key.split(':').map(Number);return row===selected&&session.mapping.includes(source)?[{source,value}]:[];});
   editRow(session,selected,edits);activeCell=null;edits.forEach(e=>drafts.delete(`${selected}:${e.source}`));invalidatePreview();const result=inspect(session);
   const remaining=result.issues.some(i=>i.row===savedRow);
-  if(advance&&!remaining){selected=result.issues.find(i=>i.row>savedRow)?.row??result.issues[0]?.row??savedRow;showAllFields=false;page=pageForRow(selected);}
+  if(advance&&!remaining){selected=result.issues.find(i=>i.row>savedRow)?.row??result.issues[0]?.row??savedRow;showAllFields=false;if(!visibleRecordIds(session,result,tableFilter).includes(selected))tableFilter='all';page=pageForRow(selected);}
   render();notify(remaining?`Row ${savedRow+1} saved; unresolved issues remain.`:`Row ${savedRow+1} saved and rechecked.${drafts.size?' Other rows still have drafts.':''}`);
   if(advance)$('repair').querySelector('.editor-field:not([hidden]) textarea')?.focus({preventScroll:true});
+  else if(savedCell){const cell=document.querySelector(`[data-cell-row="${savedCell.row}"][data-cell-source="${savedCell.source}"]`);(cell||$('repair').querySelector('.editor-field:not([hidden]) textarea')||document.querySelector('[data-filter="all"]')).focus({preventScroll:true});}
+  else $('save-row')?.focus({preventScroll:true});
 }
 function renderChanges(){
   $('change-count').textContent=`${session?.events.length||0} operations`;
@@ -102,6 +114,7 @@ function renderChanges(){
 }
 function omittedSources(){return session?session.headers.filter((_,i)=>!session.mapping.includes(i)):[];}
 function updateExport(result){
+  document.querySelectorAll('[data-stage]').forEach(button=>{button.disabled=button.dataset.stage!=='open'&&!session;button.setAttribute('aria-current',button.dataset.stage===(session?(result.canExport&&!drafts.size?'export':'review'):'open')?'step':'false');});
   document.body.classList.toggle('ready-for-export',!!session&&!!result.canExport&&!drafts.size);
   const omitted=omittedSources();
   $('omitted').innerHTML=omitted.length?`<div class="omission">These source columns are not in the target: ${omitted.map(esc).join(', ')}.<label class="check-row"><input id="omit-ack" type="checkbox" ${omitAck?'checked':''}>I confirm these columns can be omitted</label></div>`:'';
@@ -116,12 +129,11 @@ function render(){
   renderMapping();const result=session?inspect(session):{issues:[],mappingIssues:[],canExport:false};
   $('accounting').innerHTML=[['Source records',session?result.total:'—'],['Pass rules',session?result.ready:'—'],['Needs review',session?result.review:'—'],['Excluded',session?result.excluded:'—']].map(([name,count],i)=>`<button class="account-filter" data-count-filter="${['all','passed','review','excluded'][i]}" ${!session?'disabled':''} aria-pressed="${tableFilter===['all','passed','review','excluded'][i]}">${name}<strong>${count}</strong></button>`).join('');
   $('accounting').querySelectorAll('[data-count-filter]').forEach(button=>button.addEventListener('click',()=>setTableFilter(button.dataset.countFilter)));
-  document.querySelectorAll('[data-stage]').forEach(button=>{button.disabled=button.dataset.stage!=='open'&&!session;button.setAttribute('aria-current',button.dataset.stage===(session?(result.canExport&&!drafts.size?'export':'review'):'open')?'step':'false');});
   $('mapping-status').textContent=!session?'Waiting for a source file':result.mappingIssues.length?`${result.mappingIssues.length} mapping issues`:'All fields mapped';
   $('rule-strength').textContent=schema.fields.every(f=>f.type==='text'&&!f.required&&!f.unique)?'Only text/whitespace checks are enabled. Configure required, unique or type checks for stronger validation.':'';
   $('mapping-errors').innerHTML=result.mappingIssues.map(i=>`<p class="error-text">${esc(i)}</p>`).join('');
   $('undo').disabled=!session?.history.length||drafts.size>0;$('preview-trim').disabled=!session||drafts.size>0;
-  renderTable(result);renderRepair(result);renderChanges();updateExport(result);
+  renderTable(result);renderRepair(result);renderDrafts();renderChanges();updateExport(result);
 }
 async function openDemo(row,source){if(!await confirmReplacement())return;$('source-delimiter').value='';schema=validateSchema(DEMO_SCHEMA);load(DEMO_CSV,'contacts-demo.csv');if(row!==undefined)openCell(row,source);}
 $('demo').addEventListener('click',guarded(()=>openDemo()));
@@ -155,7 +167,7 @@ async function confirmReplacement(){
   return new Promise(resolve=>{const close=value=>{dialog.close();$('keep-work').onclick=null;$('replace-work').onclick=null;dialog.oncancel=null;resolve(value);};$('keep-work').onclick=()=>close(false);$('replace-work').onclick=()=>close(true);dialog.oncancel=e=>{e.preventDefault();close(false);};});
 }
 $('save-project').addEventListener('click',guarded(()=>{download('csv-review-project.csvreview',saveProject(session,drafts,filename),'application/json;charset=utf-8');notify('Project generated, including drafts and history. It contains your data; keep it secure.');}));
-$('project-file').addEventListener('change',guarded(async e=>{const file=e.target.files[0];if(!file)return;const restored=restoreProject(await readFile(file,PROJECT_LIMIT));if(!await confirmReplacement()){e.target.value='';return;}session=restored.session;tableFilter='all';activeCell=null;schema=session.schema;drafts.clear();restored.drafts.forEach((v,k)=>drafts.set(k,v));filename=restored.filename;selected=inspect(session).issues[0]?.row??0;page=Math.floor(selected/100);queuePage=0;showAllFields=false;omitAck=false;invalidatePreview();$('source-text').value=window.Papa.unparse([session.headers,...session.original]);$('file-name').textContent=`${filename} · ${session.rows.length} records · resumed`;render();$('setup-panel').open=false;document.querySelector('.mapping').open=inspect(session).mappingIssues.length>0;e.target.value='';notify('Project resumed. Original data, edits, rules, exclusions and drafts restored.');}));
+$('project-file').addEventListener('change',guarded(async e=>{const file=e.target.files[0];if(!file)return;try{const restored=restoreProject(await readFile(file,PROJECT_LIMIT));if(!await confirmReplacement())return;session=restored.session;tableFilter='all';activeCell=null;schema=session.schema;drafts.clear();restored.drafts.forEach((v,k)=>drafts.set(k,v));filename=restored.filename;selected=inspect(session).issues[0]?.row??0;page=Math.floor(selected/100);queuePage=0;showAllFields=false;omitAck=false;invalidatePreview();$('source-text').value=window.Papa.unparse([session.headers,...session.original]);$('file-name').textContent=`${filename} · ${session.rows.length} records · resumed`;render();$('setup-panel').open=false;document.querySelector('.mapping').open=inspect(session).mappingIssues.length>0;notify('Project resumed. Original data, edits, rules, exclusions and drafts restored.');}finally{e.target.value='';}}));
 $('safe-export').addEventListener('change',invalidateDownload);
 window.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&session&&document.activeElement?.closest('#repair')){e.preventDefault();try{saveSelected(true);}catch(error){notify(error.message,true);}}});
 window.addEventListener('beforeunload',e=>{if(session&&(session.events.length||drafts.size)){e.preventDefault();e.returnValue='';}});

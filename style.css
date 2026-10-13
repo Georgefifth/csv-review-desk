@@ -28,3 +28,5 @@ body:not(.has-session) .workspace{display:grid;grid-template-columns:minmax(0,1f
 
 .example-cell{display:block;background:transparent;color:inherit;border:0;border-radius:3px;padding:0;min-height:26px;font:inherit;text-align:left}.example-cell:hover:not(:disabled){background:#ffdfcf;color:#8e2d27;text-decoration:underline}
 .cell-value:has(.inline-edit){min-width:260px;max-width:320px;overflow:visible;white-space:normal}
+
+.draft-tray{margin:14px 0;padding:14px;border:1px solid #b9c9ef;border-left:3px solid var(--blue);border-radius:6px;background:#f3f6ff}.draft-summary{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}.draft-summary strong{font-size:13px}.draft-summary span{font-size:12px;color:var(--muted)}.draft-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.draft-controls label{font-size:12px}.draft-controls select{max-width:100%;min-width:145px;flex:1}.draft-controls button{font-size:12px;min-height:34px;padding:6px 9px}.draft-tray .error-text{margin:10px 0 0;font-size:12px}
