@@ -30,3 +30,5 @@ body:not(.has-session) .workspace{display:grid;grid-template-columns:minmax(0,1f
 .cell-value:has(.inline-edit){min-width:260px;max-width:320px;overflow:visible;white-space:normal}
 
 .draft-tray{margin:14px 0;padding:14px;border:1px solid #b9c9ef;border-left:3px solid var(--blue);border-radius:6px;background:#f3f6ff}.draft-summary{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}.draft-summary strong{font-size:13px}.draft-summary span{font-size:12px;color:var(--muted)}.draft-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.draft-controls label{font-size:12px}.draft-controls select{max-width:100%;min-width:145px;flex:1}.draft-controls button{font-size:12px;min-height:34px;padding:6px 9px}.draft-tray .error-text{margin:10px 0 0;font-size:12px}
+
+.check-scope{padding:10px 12px;border-left:3px solid var(--blue);background:#f3f6ff;color:var(--ink);font-size:13px;line-height:1.55;margin:0 0 16px}.basic-checks{padding:12px 0 16px;border-bottom:1px solid var(--line);margin-bottom:16px}.basic-checks p{font-size:12px;max-width:85ch;margin:8px 0 0}.basic-checks button{font-size:13px;white-space:normal;text-align:left}

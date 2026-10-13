@@ -130,7 +130,12 @@ function render(){
   $('accounting').innerHTML=[['Source records',session?result.total:'—'],['Pass rules',session?result.ready:'—'],['Needs review',session?result.review:'—'],['Excluded',session?result.excluded:'—']].map(([name,count],i)=>`<button class="account-filter" data-count-filter="${['all','passed','review','excluded'][i]}" ${!session?'disabled':''} aria-pressed="${tableFilter===['all','passed','review','excluded'][i]}">${name}<strong>${count}</strong></button>`).join('');
   $('accounting').querySelectorAll('[data-count-filter]').forEach(button=>button.addEventListener('click',()=>setTableFilter(button.dataset.countFilter)));
   $('mapping-status').textContent=!session?'Waiting for a source file':result.mappingIssues.length?`${result.mappingIssues.length} mapping issues`:'All fields mapped';
-  $('rule-strength').textContent=schema.fields.every(f=>f.type==='text'&&!f.required&&!f.unique)?'Only text/whitespace checks are enabled. Configure required, unique or type checks for stronger validation.':'';
+  const basic=schema.fields.every(f=>f.type==='text'&&!f.required&&!f.unique);
+  $('rule-strength').textContent=basic?'Basic checks only. Empty values and duplicates are allowed; email and date validity are not checked. Choose a check type or enable Required / Unique above when your task needs them.':'';
+  $('source-rules').disabled=!session;
+  $('check-scope').hidden=!session;
+  const checks=[`${schema.fields.filter(f=>f.required).length} required`,`${schema.fields.filter(f=>f.unique).length} unique`,...['email','date','enum'].map(type=>`${schema.fields.filter(f=>f.type===type).length} ${type}`)];
+  $('check-scope').textContent=basic?'Basic review: record shape and outer whitespace only. Passing does not mean emails, dates, required values or duplicates have been checked.':`Configured review: record shape, outer whitespace; ${checks.join(' · ')} field checks. Passing applies only to these rules.`;
   $('mapping-errors').innerHTML=result.mappingIssues.map(i=>`<p class="error-text">${esc(i)}</p>`).join('');
   $('undo').disabled=!session?.history.length||drafts.size>0;$('preview-trim').disabled=!session||drafts.size>0;
   renderTable(result);renderRepair(result);renderDrafts();renderChanges();updateExport(result);
@@ -141,6 +146,7 @@ $('preview-demo').addEventListener('click',guarded(()=>openDemo()));
 document.querySelectorAll('[data-preview-row]').forEach(button=>button.addEventListener('click',guarded(()=>openDemo(Number(button.dataset.previewRow),Number(button.dataset.previewSource)))));
 $('load').addEventListener('click',guarded(async()=>{const text=$('source-text').value;parseCsv(text,window.Papa,selectedDelimiter());if(await confirmReplacement())load(text,'pasted.csv');}));
 $('source-file').addEventListener('change',guarded(async e=>{const f=e.target.files[0];try{if(f){const text=await readFile(f);parseCsv(text,window.Papa,selectedDelimiter());if(await confirmReplacement())load(text,f.name);}}finally{e.target.value='';}}));
+$('source-rules').addEventListener('click',guarded(()=>{if(!session)return;setSchema({version:1,name:'Source columns · basic checks',fields:session.headers.map(name=>({name,type:'text',required:false,unique:false}))});document.querySelector('.mapping').open=true;notify('All source columns mapped. Basic checks only: record shape and outer whitespace. Configure stronger checks if needed; original values and saved edits are unchanged.');}));
 $('target-file').addEventListener('change',guarded(async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const headers=parseCsvHeaders(await readFile(f),window.Papa,selectedDelimiter());
