@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parent.parent
 out = root / 'dist'
 out.mkdir(exist_ok=True)
 files = ['index.html', 'style.css', 'app.mjs', 'core.mjs', 'project.mjs',
-         'vendor/papaparse.min.js', 'vendor/LICENSE', 'assets/atkinson-next.ttf', 'assets/OFL.txt']
+         'view.mjs', 'vendor/papaparse.min.js', 'vendor/LICENSE', 'assets/atkinson-next.ttf', 'assets/OFL.txt']
 expected = set(files + ['.nojekyll'])
 for existing in out.rglob('*'):
     if existing.is_file() and existing.relative_to(out).as_posix() not in expected:
@@ -28,7 +28,7 @@ for name in ['index.html', 'app.mjs', 'project.mjs', 'style.css']:
     elif name == 'style.css':
         text = text.replace('assets/atkinson-next.ttf', f'assets/atkinson-next.ttf?v={version}')
     else:
-        text = re.sub(r"(from\s+['\"])(\./(?:core|project)\.mjs)(['\"])",
+        text = re.sub(r"(from\s+['\"])(\./(?:core|project|view)\.mjs)(['\"])",
                       lambda match: f'{match[1]}{match[2]}?v={version}{match[3]}', text)
     target.write_text(text)
 (out / '.nojekyll').write_text('')

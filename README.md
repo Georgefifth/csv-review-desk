@@ -34,7 +34,7 @@ node project.test.mjs
 python3 scripts/build_site.py
 ```
 
-Open `http://127.0.0.1:8765/`. The build script allowlists only ten static files into `dist/`, excluding test captures, working projects, research notes and Git metadata.
+Open `http://127.0.0.1:8765/`. The build script allowlists only eleven static files into `dist/`, excluding test captures, working projects, research notes and Git metadata.
 
 ## GitHub Pages
 
@@ -57,3 +57,7 @@ A second frozen external-data round added 23 cases from Apache Commons CSV regre
 ## Visual design
 
 The review workspace uses a locally hosted Atkinson Hyperlegible Next variable font (OFL-1.1; assets/OFL.txt), a cobalt action accent and coral exception cues. The initial labelled example opens the existing working demo. Save actions appear before fields in the repair panel and remain sticky while reviewing a row. Responsive tables scroll within their own containers. No competitor artwork, remote fonts or decorative animations are used.
+
+## Direct interaction
+
+Click a highlighted cell in the initial example to open its working editor. Mapped, active source cells edit directly in the table; **Save row** or Ctrl/Cmd+Enter commits the current row and rechecks it. Enter alone preserves multiline input. **Cancel cell edit** or Esc discards only that cell draft. The inspector and inline editor share drafts. Use the record counters or filter buttons to switch views; filters retain original source row numbers and never change export eligibility or scope. Open/Review/Export controls navigate to their actual sections. Unmapped and excluded cells remain read-only.

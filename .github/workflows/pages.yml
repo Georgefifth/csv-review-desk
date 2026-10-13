@@ -18,6 +18,7 @@ jobs:
           node-version: '22'
       - run: node core.test.mjs
       - run: node project.test.mjs
+      - run: node view.test.mjs
       - run: node --check app.mjs
       - run: python3 scripts/build_site.py
       - uses: actions/upload-pages-artifact@v4
